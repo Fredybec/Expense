@@ -1,0 +1,37 @@
+stages:
+  - test
+  - deploy
+
+variables:
+  # Define environment variables for the deployment step
+  AZURE_APP_NAME: "suividebudget"
+  AZURE_RESOURCE_GROUP: "DevOpsLab"
+  AZURE_SP_APP_ID: "aa48e286-69f1-4dd0-8ce6-4e8bef812068"
+  AZURE_SP_PASSWORD: "Rtb8Q~IutA121XkkbG36OLnuVUwf~m07pUgTtau2"
+  AZURE_SP_TENANT_ID: "f0c4b24d-851a-4404-9623-7e138b887664"
+
+test:
+  stage: test
+  image: node:16  # Use an image with Node.js preinstalled
+  script:
+    - apt-get update -qy  # Update package lists
+    - apt-get install -y python3 python3-pip  # Install Python and pip
+    - pip3 install --upgrade pip  # Update pip to the latest version
+    - curl -sL https://aka.ms/InstallAzureCLIDeb | bash  # Install Azure CLI
+    - az login --service-principal --tenant $AZURE_SP_TENANT_ID -u $AZURE_SP_APP_ID -p $AZURE_SP_PASSWORD
+
+deploy:
+  stage: deploy
+  image: node:16
+  only:
+    - main
+  script:
+    - apt-get update -qy  # Update package lists
+    - apt-get install -y python3 python3-pip  # Install Python and pip
+    - pip3 install --upgrade pip  # Update pip to the latest version
+    - curl -sL https://aka.ms/InstallAzureCLIDeb | bash  # Install Azure CLI
+    - az login --service-principal --tenant $AZURE_SP_TENANT_ID -u $AZURE_SP_APP_ID -p $AZURE_SP_PASSWORD
+    - npm install
+    - npm run build
+    - az webapp up --name $AZURE_APP_NAME --resource-group $AZURE_RESOURCE_GROUP --sku F1 --location eastus --os-type Linux --dryrun  # Perform a dry run to verify the deployment
+    - az webapp up --name $AZURE_APP_NAME --resource-group $AZURE_RESOURCE_GROUP --sku F1 --location eastus --os-type Linux  # Deploy the application directly
